@@ -1,0 +1,52 @@
+<tb_good>
+productID
+url
+efficacy
+title
+comment_num
+brand
+standard
+keywords
+good_rate
+
+<tb_comment>
+commentID
+userID
+productID
+comment_date
+comment_text
+comment_stars
+userlevel
+
+=============================================
+
+create database bluemoon character set utf8;
+
+use bluemoon;
+
+create table tb_good(
+    productID int primary key not null,
+    url varchar(50) not null,
+    efficacy varchar(10),
+    title varchar(100) not null,
+    comment_num int default 0 not null,
+    brand varchar(10) not null,
+    standard varchar(1000),
+    keywords varchar(300),
+    good_rate float not null default 0
+)engine = myisam;
+
+create table tb_comment(
+    commentID int primary key auto_increment not null,
+    userID int,
+    productID int not null,
+    comment_date datetime not null,
+    comment_text text,
+    comment_stars char(2),
+    userlevel char(2),
+    constraint FK_productID foreign key(productID) references tb_good(productID)
+)engine = myisam;
+
+alter table tb_comment add index index_productID(productID);
+
+-- insert into tb_good values(33553692, 'http://item.yhd.com/item/39182703', '强100%', '蓝月亮 亮白增艳套装洗衣液 自然清香 7瓶量贩装14.4斤', 42994, '蓝月亮', '【产品名称】：蓝月亮亮白增艳洗衣液_【规格】：3kg_【香型】：自然清香_【保质期】：1095天_【主要成分】：多种活性洁净成分、去污增效剂、自然清香香氛_【商品名称】：蓝月亮 手洗专用翻盖洗衣液（风清白兰）500g/瓶_【香型】：风清白兰_【净含量】：500g/瓶_【保质期】：3年_【适用范围】：适用于棉、麻、丝、毛、羽绒、合成纤维、混纺等多种质地的衣物_【主要成分】：多种活性洁净成分、去污增效剂、快速漂净成分、 风清白兰香氛_【产品标准】：QB/T 1224_【商品名称】：蓝月亮 手洗专用洗衣液旅行装3瓶组合装（风清白兰）80g*3_【香型】：风清白兰_【规格】：80g*3_【保质期】：3年_【商品特点】：80g容量，可携带乘机；创新包装设计，使用方便', '441_洗涤效果好_1142###77_比超市便宜_812###371_送货快_700###442_洗衣服干净_665###443_去污力强_451###420_适合家用_394###423_大品牌_391###444_包装不错_319###276_分量足_243###243894_比洗衣粉好_29###', 0.98);
