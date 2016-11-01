@@ -9,18 +9,10 @@ import java.sql.SQLException;
  * Created by llei on 2016/10/24.
  */
 public class ItemSQLAccess {
-    static DBConnUtil db1 = null;
-    static ResultSet ret = null;
 
-    public static boolean insert(Item item) {
+    public static boolean insert(Item item, PreparedStatement ps) {
         boolean flag = true;
-        Connection conn = null;
-        PreparedStatement ps = null;    //创建PreparedStatement 对象
-
-        String sql = "insert into tb_good values(?,?,?,?,?,?,?,?,?)";  //sql语句不再采用拼接方式，应用占位符问号的方式写sql语句。
-        conn = DBConnUtil.getConn();
         try {
-            ps = conn.prepareStatement(sql);
             ps.setInt(1, item.getProductID()); //对占位符设置值，占位符顺序从1开始，第一个参数是占位符的位置，第二个参数是占位符的值。
             ps.setString(2, item.getUrl());
             ps.setString(3, item.getEfficacy());
@@ -30,16 +22,29 @@ public class ItemSQLAccess {
             ps.setString(7, item.getStandard());
             ps.setString(8, item.getKeywords());
             ps.setString(9, item.getGood_rate());
-            int i = ps.executeUpdate();
-            if (i == 0) {
-                flag = false;
-            }
+            ps.addBatch();
         } catch (SQLException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        } finally {
-            DBConnUtil.closeAll(null, ps, conn);
+            flag = false;
+        } catch (RuntimeException e) {
+            e.printStackTrace();
         }
         return flag;
     }
+
+    public static ResultSet queryTitleByBrand(String brand) {
+        ResultSet rs = null;
+        Connection conn = DBConnUtil.getConn();
+        String sql = "select title from tb_good where brand = ? order by title";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);    //创建PreparedStatement 对象
+            ps.setString(1, brand);
+            rs = ps.executeQuery();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return rs;
+    }
+
 }

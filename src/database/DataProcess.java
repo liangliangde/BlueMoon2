@@ -5,28 +5,86 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 import java.io.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 
 /**
  * Created by llei on 2016/10/24.
  */
 public class DataProcess {
     public static void main(String[] args) throws IOException {
-//        insertItems("data\\items");
-        insertCommnent("data\\comments");
+        insertItems("data\\aomiao\\items");
+        insertCommnent("data\\aomiao\\comments");
+        insertItems("data\\chaoneng\\items");
+        insertCommnent("data\\chaoneng\\comments");
+        insertItems("data\\jieba\\items");
+        insertCommnent("data\\jieba\\comments");
+        insertItems("data\\lanyueliang\\items");
+        insertCommnent("data\\lanyueliang\\comments");
+        insertItems("data\\taizi\\items");
+        insertCommnent("data\\taizi\\comments");
+        insertItems("data\\walch\\items");
+        insertCommnent("data\\walch\\comments");
+        System.out.print("finish!!");
     }
 
-    private static void insertCommnent(String path) throws IOException{
-        File[] files = new File(path).listFiles();
-        for (File file : files) {
-            FileInputStream fis = new FileInputStream(file);
-            InputStreamReader isr = new InputStreamReader(fis);
-            BufferedReader br = new BufferedReader(isr);
-            String linetxt = null;
-            while ((linetxt = br.readLine()) != null) {
-                Comment curComment = parseComment(linetxt);
-                CommentSQLAccess.insert(curComment);
+    private static void insertCommnent(String path) throws IOException {
+        Connection conn = DBConnUtil.getConn();
+        String sql = "insert into tb_comment(userID, productID, comment_date, comment_text, comment_stars, userlevel) values(?,?,?,?,?,?)";  //sql语句不再采用拼接方式，应用占位符问号的方式写sql语句。
+        PreparedStatement ps = null;    //创建PreparedStatement 对象
+        try {
+            ps = conn.prepareStatement(sql);
+            File[] files = new File(path).listFiles();
+            int count = 0;
+            int batchSize = 1;
+            for (File file : files) {
+                FileInputStream fis = new FileInputStream(file);
+                InputStreamReader isr = new InputStreamReader(fis);
+                BufferedReader br = new BufferedReader(isr);
+                String linetxt = null;
+                while ((linetxt = br.readLine()) != null) {
+                    try {
+                        Comment curComment = parseComment(linetxt);
+                        CommentSQLAccess.insert(curComment, ps);
+                        if (++count % batchSize == 0) {
+                            ps.executeBatch();
+                        }
+                    } catch (RuntimeException e) {
+                        e.printStackTrace();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                fis.close();
+                isr.close();
+                br.close();
             }
+            ps.executeBatch();
+            ps.close();
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+    }
+
+    private static boolean isValidDate(String str) {
+        boolean convertSuccess = true;
+        if (str.split(" ").length != 2) {
+            return false;
+        }
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        try {
+            format.setLenient(false);
+            format.parse(str);
+        } catch (ParseException e) {
+            // e.printStackTrace();
+            // 如果throw java.text.ParseException或者NullPointerException，就说明格式不对
+            convertSuccess = false;
+        }
+        return convertSuccess;
     }
 
     private static Comment parseComment(String linetxt) {
@@ -44,21 +102,39 @@ public class DataProcess {
         } catch (JSONException e) {
             System.out.println("Comment parse error !!!!");
             e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return comment;
     }
 
     private static void insertItems(String path) throws IOException {
-        File[] files = new File(path).listFiles();
-        for (File file : files) {
-            FileInputStream fis = new FileInputStream(file);
-            InputStreamReader isr = new InputStreamReader(fis);
-            BufferedReader br = new BufferedReader(isr);
-            String linetxt = null;
-            while ((linetxt = br.readLine()) != null) {
-                Item curItem = parseItem(linetxt);
-                ItemSQLAccess.insert(curItem);
+        Connection conn = DBConnUtil.getConn();
+        String sql = "insert into tb_good values(?,?,?,?,?,?,?,?,?)";  //sql语句不再采用拼接方式，应用占位符问号的方式写sql语句。
+        PreparedStatement ps = null;
+        try {
+            ps = conn.prepareStatement(sql);
+            File[] files = new File(path).listFiles();
+            int count = 0;
+            int batchSize = 1000;
+            for (File file : files) {
+                FileInputStream fis = new FileInputStream(file);
+                InputStreamReader isr = new InputStreamReader(fis);
+                BufferedReader br = new BufferedReader(isr);
+                String linetxt = null;
+                while ((linetxt = br.readLine()) != null) {
+                    Item curItem = parseItem(linetxt);
+                    ItemSQLAccess.insert(curItem, ps);
+                    if (++count % batchSize == 0) {
+                        ps.executeBatch();
+                    }
+                }
             }
+            ps.executeBatch();
+            ps.close();
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
