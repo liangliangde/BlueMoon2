@@ -37,12 +37,20 @@ public class ItemSQLAccess {
         ResultSet rs = null;
         Connection conn = DBConnUtil.getConn();
         String sql = "select title from tb_good where brand = ? order by title";
+        PreparedStatement ps = null;
         try {
-            PreparedStatement ps = conn.prepareStatement(sql);    //创建PreparedStatement 对象
+            ps = conn.prepareStatement(sql);    //创建PreparedStatement 对象
             ps.setString(1, brand);
             rs = ps.executeQuery();
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                conn.close();
+                ps.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
         return rs;
     }

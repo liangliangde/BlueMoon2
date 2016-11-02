@@ -1,10 +1,13 @@
 package process;
 
 import database.CommentSQLAccess;
+import database.DBConnUtil;
 import org.ansj.domain.Term;
 import org.ansj.splitWord.analysis.ToAnalysis;
 
 import java.io.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
@@ -20,10 +23,39 @@ public class ExtractTopic {
 
     public static void main(String[] args) throws SQLException, IOException {
 //        createInputforLDA();
-        createValidCommentMap("data\\LDA\\validComment.txt");
+        List<String> validCommentAssignment = createValidCommentMap("data\\LDA\\validComment.txt", 0.12);
+        insertTopicAssignment(validCommentAssignment);
     }
 
-    private static void createValidCommentMap(String path) throws IOException {
+    private static void insertTopicAssignment(List<String> validCommentAssignment) {
+        Connection conn = DBConnUtil.getConn();
+        String sql = "update tb_comment set package = ?, function = ?, smell = ?, service = ?, express = ?, price = ? where commentID = ?";
+        PreparedStatement ps = null;
+        for(String content : validCommentAssignment) {
+            String arr[] = content.split(" ");
+            try {
+                ps = conn.prepareStatement(sql);    //创建PreparedStatement 对象
+                ps.setString(1, arr[1]);
+                ps.setString(2, arr[2]);
+                ps.setString(3, arr[3]);
+                ps.setString(4, arr[4]);
+                ps.setString(5, arr[5]);
+                ps.setString(6, arr[6]);
+                ps.setString(7, arr[0]);
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            conn.close();
+            ps.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static List<String> createValidCommentMap(String path, double threshold) throws IOException {
         Map<Integer, String> topicMap = ClassifyCommentByMaxTopic.loadTopicMap("data\\LDA\\topicMap.txt");
         List<Double[]> topicAssignList = ClassifyCommentByMaxTopic.loadTopicAssignList("data\\LDA\\model-final.theta");
         List<String> validCommentIDList = new ArrayList<>();
@@ -32,19 +64,23 @@ public class ExtractTopic {
         BufferedReader br = new BufferedReader(isr);
         String lineTxt = null;
         int index = 0;
-        double threshold = 0.12;
         while ((lineTxt = br.readLine()) != null) {
+            StringBuilder assignVec = new StringBuilder();
             List<Integer> assignTypeArr = getAssignType(topicMap, topicAssignList.get(index++), threshold);
             for (Map.Entry<Integer, String> entry : topicMap.entrySet()) {
                 if (assignTypeArr.contains(entry.getKey())){
-
+                    assignVec.append(1);
+                }else{
+                    assignVec.append(0);
                 }
+                assignVec.append(" ");
             }
-//            validCommentIDList.add(lineTxt + " " + maxAssignType);
+            validCommentIDList.add(lineTxt + " " + assignVec);
         }
         fis.close();
         isr.close();
         br.close();
+        return validCommentIDList;
     }
 
     private static List<Integer> getAssignType(Map<Integer, String> topicMap, Double[] doubles, double theshold) {
@@ -72,6 +108,7 @@ public class ExtractTopic {
                 sb.append(cur.substring(cur.indexOf(",") + 1)).append("\n");
             }
         }
+        rs.close();
         FileOutputStream fos = new FileOutputStream("data\\LDA\\LDAinput.txt", false);
         fos.write((validCommentNum + "\n" + sb.toString()).getBytes());
         fos.close();

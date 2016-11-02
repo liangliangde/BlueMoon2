@@ -44,6 +44,12 @@ create table tb_comment(
     comment_text text,
     comment_stars char(2),
     userlevel char(2),
+    package bool default false,
+    function bool default false,
+    smell bool default false,
+    service bool default false,
+    express bool default false,
+    price bool default false,
     constraint FK_productID foreign key(productID) references tb_good(productID)
 )engine = myisam;
 
